@@ -1,0 +1,6 @@
+interface:
+  display_name: "SCORM 2004 to 1.2"
+  short_description: "Repair SCORM assets and rebuild packages"
+  default_prompt: "Use $scorm2004-to-12 to inspect this SCORM ZIP, repair image loading, and rebuild a safe package."
+policy:
+  allow_implicit_invocation: true
