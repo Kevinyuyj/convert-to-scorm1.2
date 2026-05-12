@@ -1,6 +1,10 @@
 ---
 name: scorm2004-to-12
 description: Repair and rebuild SCORM/Rise course packages, especially SCORM 2004 packages with broken image loading, asset path mismatches, URL-encoding problems, or requests to convert/rebuild as SCORM 1.2. Use when Codex is given SCORM ZIP files, Rise exports, imsmanifest.xml, scormcontent/index.html, or asks for SCORM 2004 to 1.2 conversion, localization without breaking assets, or image/resource loading diagnostics.
+version: 0.2.0
+license: MIT
+compatibility: Requires Python 3, zip/unzip, and local filesystem access.
+metadata: {"agents":["codex","hermes","openclaw","generic-agent"],"openclaw":{"homepage":"https://github.com/Kevinyuyj/convert-to-scorm1.2"}}
 ---
 
 # SCORM 2004 To 1.2
@@ -24,6 +28,7 @@ A valid package must close this loop: JSON reference -> actual file -> manifest 
 2. If no SCORM 1.2 base exists, run the package through `convert12`: decode course JSON, audit assets, normalize risky paths, update JSON and manifest together, switch the Rustici driver standard to SCORM 1.2, and repackage.
 3. Treat the result as `SCORM 1.2-like` unless an LMS smoke test confirms launch, bookmarking, completion, and score behavior.
 4. Never mix runtime chunks from unrelated exports unless the course JSON and chunk manifests are proven compatible.
+5. If the package is not Rise/Rustici based, inspect the course-layer runtime before promising conversion. Look for wrappers such as `pipwerks.SCORM`, custom `SCORMlocal.js`, navigation controllers, bookmark writes, and score/completion code.
 
 ## Workflow
 
@@ -31,8 +36,10 @@ A valid package must close this loop: JSON reference -> actual file -> manifest 
 2. Run the asset doctor inspection:
 
 ```bash
-python3 scripts/scorm_asset_doctor.py inspect course.zip
+python3 {baseDir}/scripts/scorm_asset_doctor.py inspect course.zip
 ```
+
+If your agent does not expand `{baseDir}`, run from the repository root and use `python3 scorm2004-to-12/scripts/scorm_asset_doctor.py ...`.
 
 3. Review:
 
@@ -46,13 +53,13 @@ python3 scripts/scorm_asset_doctor.py inspect course.zip
 4. Default conversion command:
 
 ```bash
-python3 scripts/scorm_asset_doctor.py convert12 course.zip --output course-scorm12.zip
+python3 {baseDir}/scripts/scorm_asset_doctor.py convert12 course.zip --output course-scorm12.zip
 ```
 
 5. If the user only asks for asset repair without SCORM 1.2 conversion, run:
 
 ```bash
-python3 scripts/scorm_asset_doctor.py repair course.zip --output repaired.zip --ascii-assets
+python3 {baseDir}/scripts/scorm_asset_doctor.py repair course.zip --output repaired.zip --ascii-assets
 ```
 
 6. If localizing from another package, do not migrate media/resource fields. Transfer only visible text fields from the reference course JSON. Preserve the destination package media keys and runtime fields.
@@ -60,10 +67,12 @@ python3 scripts/scorm_asset_doctor.py repair course.zip --output repaired.zip --
 
 ```bash
 unzip -t course-scorm12.zip
-python3 scripts/scorm_asset_doctor.py inspect course-scorm12.zip
+python3 {baseDir}/scripts/scorm_asset_doctor.py inspect course-scorm12.zip
 ```
 
 Accept only if `scorm_version` is `SCORM 1.2-like`, `missing_local_image_refs` is `0`, `risky_image_refs` is `0`, `manifest_missing_refs` is `0`, and ZIP integrity passes.
+
+For non-Rise packages, `scorm_asset_doctor.py inspect` may fail because there is no `scormcontent/index.html`. That is a package-shape mismatch, not proof that the ZIP is invalid. Fall back to manifest inspection, ZIP integrity, runtime JavaScript inspection, and LMS smoke testing.
 
 ## Text Migration Rules
 
@@ -93,4 +102,9 @@ Do not migrate these unless deliberately rebuilding assets:
 
 SCORM 2004 to 1.2 is not a pure text transform. The manifest namespaces, sequencing metadata, and LMS API expectations differ. This skill now produces a conservative `SCORM 1.2-like` package by preserving the course runtime, normalizing assets, replacing the manifest with a SCORM 1.2 manifest, and setting Rustici `strLMSStandard` to `SCORM`. Report that LMS smoke testing is still required before treating the package as production-proven.
 
-Use `references/conversion-notes.md` only when you need deeper conversion or manifest guidance.
+Use `references/conversion-notes.md` when you need deeper conversion or manifest guidance.
+Use `references/runtime-debugging-notes.md` when the package has custom course-layer SCORM JavaScript, bookmark/resume bugs, completion bugs, score bugs, or suspicious learning-time records.
+
+## Agent Compatibility
+
+This skill is written as a plain `SKILL.md` directory so it can be read by Codex and by agents that support AgentSkills-style folders. The script does not depend on Codex-specific APIs. For agents that do not auto-expand skill-relative paths, run commands from the repository root or replace `scorm2004-to-12/` with the local skill directory.
