@@ -79,6 +79,8 @@ When a package uses custom runtime files such as `SCORMlocal.js` or `pipwerks.SC
 
 Learning time should be written once at real session termination. Progress/bookmark commits should not repeatedly overwrite `cmi.core.session_time`, because some LMSs turn each commit into a separate learning-time row.
 
+For `cmi.core.exit`, prefer conditional final-state behavior when LMS testing shows both variants work: set `suspend` for unfinished attempts, and set an empty exit value after `completed`, `passed`, or `failed`. Always writing `suspend` is kept as an LMS-specific fallback, not the default recommendation.
+
 See `scorm2004-to-12/references/runtime-debugging-notes.md` for the detailed gate.
 
 ## Agent compatibility
@@ -90,6 +92,7 @@ This repository does not claim a separate Hermes or OpenClaw plugin runtime. The
 - read `scorm2004-to-12/SKILL.md`
 - run `scorm2004-to-12/scripts/scorm_asset_doctor.py`
 - load `references/` only when deeper conversion or runtime-debugging guidance is needed
+- optionally read `agents/hermes.yaml` or `agents/openclaw.yaml` for platform-neutral routing metadata
 
 ## Safety note
 

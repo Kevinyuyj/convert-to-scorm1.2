@@ -25,6 +25,25 @@ When converting course-layer runtime behavior toward SCORM 1.2, use SCORM 1.2 fi
 
 Do not rely on SCORM 2004-only progress fields such as `cmi.progress_measure` when targeting SCORM 1.2.
 
+## Exit State Gate
+
+Do not treat `cmi.core.exit = "suspend"` as a universal learning-time fix. If both variants pass the LMS smoke test, prefer the cleaner SCORM 1.2 session semantics:
+
+```js
+var lessonStatus = scorm.get("cmi.core.lesson_status");
+var isFinalStatus = lessonStatus == "completed" || lessonStatus == "passed" || lessonStatus == "failed";
+scorm.set("cmi.core.exit", isFinalStatus ? "" : "suspend");
+```
+
+Use always-`suspend` only as an LMS-specific compatibility fallback when testing proves the conditional form fails to record the desired learning-time or resume behavior.
+
+Smoke test both variants only when the LMS behavior is unclear:
+
+1. Complete or pass the course and confirm completion/pass status remains stable.
+2. Confirm learning time is recorded close to the actual open session time.
+3. Relaunch after completion and confirm the LMS does not incorrectly force an unfinished resume state.
+4. Relaunch before completion and confirm the unfinished attempt resumes correctly.
+
 ## Bookmark And Resume Gate
 
 A converted package should not only write a bookmark during unload. Write and commit bookmark state when meaningful navigation happens, then verify that launch logic consumes the saved bookmark instead of always routing to the default first page.

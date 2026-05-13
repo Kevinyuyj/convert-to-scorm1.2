@@ -1,0 +1,27 @@
+name: scorm2004-to-12
+display_name: "SCORM 2004 to 1.2"
+homepage: "https://github.com/Kevinyuyj/convert-to-scorm1.2"
+description: "Portable AgentSkills-style SCORM package conversion and runtime-debugging workflow."
+entrypoint: "../SKILL.md"
+execution:
+  mode: "local-cli"
+  commands:
+    inspect: "python3 scorm2004-to-12/scripts/scorm_asset_doctor.py inspect course.zip"
+    convert12: "python3 scorm2004-to-12/scripts/scorm_asset_doctor.py convert12 course.zip --output course-scorm12.zip"
+    repair: "python3 scorm2004-to-12/scripts/scorm_asset_doctor.py repair course.zip --output repaired.zip --ascii-assets"
+validation:
+  zip_integrity: "unzip -t course-scorm12.zip"
+  inspect_output:
+    scorm_version: "SCORM 1.2-like"
+    missing_local_image_refs: 0
+    risky_image_refs: 0
+    manifest_missing_refs: 0
+  lms_smoke_gates:
+    - "launch"
+    - "bookmark/resume"
+    - "completion/pass"
+    - "score reporting when applicable"
+    - "learning-time reporting"
+notes:
+  - "This is metadata for OpenClaw-style routing. The actual workflow remains in SKILL.md and scripts/scorm_asset_doctor.py."
+  - "For custom course runtime fixes, load references/runtime-debugging-notes.md before editing JavaScript."

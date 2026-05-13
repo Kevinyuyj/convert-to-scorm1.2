@@ -7,6 +7,7 @@ This skill is packaged as a plain directory with `SKILL.md`, `scripts/`, `refere
 - Codex can load `SKILL.md` directly as a local skill.
 - Hermes/OpenClaw-style agents can read the same `SKILL.md` and execute the Python script from the repository root.
 - Generic agents can use the README and run `python3 scorm2004-to-12/scripts/scorm_asset_doctor.py ...`.
+- `hermes.yaml` and `openclaw.yaml` provide lightweight routing metadata only; they do not replace `SKILL.md`.
 
 ## Compatibility Boundary
 
@@ -21,3 +22,14 @@ python3 scorm2004-to-12/scripts/scorm_asset_doctor.py inspect course.zip
 ```
 
 If the skill is installed into an agent-specific skills directory, replace `scorm2004-to-12/` with that installed directory path.
+
+## Runtime Debugging Contract
+
+For custom vendor packages, agents should load `references/runtime-debugging-notes.md` before changing course-layer JavaScript. The default acceptance gates are launch, bookmark/resume, completion/pass, score when applicable, and learning-time reporting.
+
+When `cmi.core.exit` behavior is in question, prefer conditional final-state behavior if LMS testing proves both variants work:
+
+- unfinished attempt: `suspend`
+- final status (`completed`, `passed`, or `failed`): empty exit value
+
+Use always-`suspend` only as a documented LMS-specific fallback.

@@ -1,10 +1,10 @@
 ---
 name: scorm2004-to-12
 description: Repair and rebuild SCORM/Rise course packages, especially SCORM 2004 packages with broken image loading, asset path mismatches, URL-encoding problems, or requests to convert/rebuild as SCORM 1.2. Use when Codex is given SCORM ZIP files, Rise exports, imsmanifest.xml, scormcontent/index.html, or asks for SCORM 2004 to 1.2 conversion, localization without breaking assets, or image/resource loading diagnostics.
-version: 0.2.0
+version: 0.2.1
 license: MIT
 compatibility: Requires Python 3, zip/unzip, and local filesystem access.
-metadata: {"agents":["codex","hermes","openclaw","generic-agent"],"openclaw":{"homepage":"https://github.com/Kevinyuyj/convert-to-scorm1.2"}}
+metadata: {"agents":["codex","hermes","openclaw","generic-agent"],"hermes":{"profile":"agents/hermes.yaml"},"openclaw":{"profile":"agents/openclaw.yaml","homepage":"https://github.com/Kevinyuyj/convert-to-scorm1.2"}}
 ---
 
 # SCORM 2004 To 1.2
@@ -26,7 +26,7 @@ A valid package must close this loop: JSON reference -> actual file -> manifest 
 
 1. If a known-good same-course SCORM 1.2 package exists, use it as the structural base. Copy only visible text/course data from the bad package and preserve the good package runtime, assets, manifest resource list, and SCORM driver.
 2. If no SCORM 1.2 base exists, run the package through `convert12`: decode course JSON, audit assets, normalize risky paths, update JSON and manifest together, switch the Rustici driver standard to SCORM 1.2, and repackage.
-3. Treat the result as `SCORM 1.2-like` unless an LMS smoke test confirms launch, bookmarking, completion, and score behavior.
+3. Treat the result as `SCORM 1.2-like` unless an LMS smoke test confirms launch, bookmarking, completion, score, and learning-time behavior.
 4. Never mix runtime chunks from unrelated exports unless the course JSON and chunk manifests are proven compatible.
 5. If the package is not Rise/Rustici based, inspect the course-layer runtime before promising conversion. Look for wrappers such as `pipwerks.SCORM`, custom `SCORMlocal.js`, navigation controllers, bookmark writes, and score/completion code.
 
@@ -103,7 +103,7 @@ Do not migrate these unless deliberately rebuilding assets:
 SCORM 2004 to 1.2 is not a pure text transform. The manifest namespaces, sequencing metadata, and LMS API expectations differ. This skill now produces a conservative `SCORM 1.2-like` package by preserving the course runtime, normalizing assets, replacing the manifest with a SCORM 1.2 manifest, and setting Rustici `strLMSStandard` to `SCORM`. Report that LMS smoke testing is still required before treating the package as production-proven.
 
 Use `references/conversion-notes.md` when you need deeper conversion or manifest guidance.
-Use `references/runtime-debugging-notes.md` when the package has custom course-layer SCORM JavaScript, bookmark/resume bugs, completion bugs, score bugs, or suspicious learning-time records.
+Use `references/runtime-debugging-notes.md` when the package has custom course-layer SCORM JavaScript, bookmark/resume bugs, completion bugs, score bugs, suspicious learning-time records, or uncertain `cmi.core.exit` behavior.
 
 ## Agent Compatibility
 

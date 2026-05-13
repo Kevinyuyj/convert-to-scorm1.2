@@ -1,0 +1,22 @@
+name: scorm2004-to-12
+display_name: "SCORM 2004 to 1.2"
+description: "Inspect, repair, and rebuild SCORM packages, with runtime-debugging guidance for resume, completion, score, and learning time."
+entrypoint: "../SKILL.md"
+runtime:
+  type: "markdown-skill"
+  commands:
+    inspect: "python3 scorm2004-to-12/scripts/scorm_asset_doctor.py inspect course.zip"
+    convert12: "python3 scorm2004-to-12/scripts/scorm_asset_doctor.py convert12 course.zip --output course-scorm12.zip"
+    repair: "python3 scorm2004-to-12/scripts/scorm_asset_doctor.py repair course.zip --output repaired.zip --ascii-assets"
+compatibility:
+  agent_style: "AgentSkills"
+  requires:
+    - "Python 3"
+    - "zip/unzip"
+    - "local filesystem access"
+guidance:
+  load_runtime_debugging_notes_when:
+    - "custom SCORM JavaScript is present"
+    - "bookmark or resume fails"
+    - "completion, score, or learning-time reporting is suspicious"
+  exit_state_default: "Use suspend for unfinished attempts; use an empty exit value after completed, passed, or failed when LMS testing shows both variants work."
