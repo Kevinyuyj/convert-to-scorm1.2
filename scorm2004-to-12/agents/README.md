@@ -27,6 +27,8 @@ If the skill is installed into an agent-specific skills directory, replace `scor
 
 For custom vendor packages, agents should load `references/runtime-debugging-notes.md` before changing course-layer JavaScript. The default acceptance gates are launch, bookmark/resume, completion/pass, score when applicable, and learning-time reporting.
 
+For learning-time fixes, agents should check whether multiple exit events call the same save path (`pagehide`, `beforeunload`, `unload`, or manual termination). If so, use a per-launch guard such as `sessionTimeSaved` so the same `cmi.core.session_time` value is not submitted more than once. Keep this as inspected runtime code, not an automatic script patch.
+
 When `cmi.core.exit` behavior is in question, prefer conditional final-state behavior if LMS testing proves both variants work:
 
 - unfinished attempt: `suspend`

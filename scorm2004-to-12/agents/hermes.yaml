@@ -19,4 +19,6 @@ guidance:
     - "custom SCORM JavaScript is present"
     - "bookmark or resume fails"
     - "completion, score, or learning-time reporting is suspicious"
+    - "multiple exit events can write session time"
   exit_state_default: "Use suspend for unfinished attempts; use an empty exit value after completed, passed, or failed when LMS testing shows both variants work."
+  learning_time_guard: "When pagehide, beforeunload, unload, or manual termination share one save path, use a per-launch guard such as sessionTimeSaved to avoid duplicate cmi.core.session_time submission."

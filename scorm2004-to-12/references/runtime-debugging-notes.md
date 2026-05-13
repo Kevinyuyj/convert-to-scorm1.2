@@ -67,6 +67,28 @@ Recommended pattern:
 1. Record a session start timestamp during SCORM initialization.
 2. During progress/bookmark saves, commit `lesson_location`, `suspend_data`, status, and score as needed, but do not update `session_time`.
 3. On real termination/unload, compute elapsed time once, set `cmi.core.session_time`, set `cmi.core.exit`, commit, then quit.
+4. If multiple browser exit events call the same save function (`pagehide`, `beforeunload`, `unload`, or a manual `ScormTerminate()`), add a per-launch guard so the same elapsed time is not submitted twice.
+
+Recommended guard for custom vendor runtimes:
+
+```js
+var sessionTimeSaved = false;
+
+function SaveData(includeSessionTime) {
+  if (includeSessionTime && !sessionTimeSaved) {
+    var dtm = new Date();
+    var n = dtm.getTime() - g_dtmInitialized.getTime();
+    scorm.set("cmi.core.session_time", centisecsToSCORM12Time(Math.floor(n / 10)));
+    sessionTimeSaved = true;
+  }
+
+  scorm.save();
+}
+```
+
+This guard prevents duplicate submission of the same launch session duration. It does not prevent the next launch from reporting a new duration, because the page reloads and `sessionTimeSaved` starts as `false` again.
+
+Do not add this as a blind automatic script patch. First inspect the course runtime and confirm whether more than one exit path can write `session_time`.
 
 Smoke test:
 

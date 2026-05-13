@@ -79,6 +79,8 @@ When a package uses custom runtime files such as `SCORMlocal.js` or `pipwerks.SC
 
 Learning time should be written once at real session termination. Progress/bookmark commits should not repeatedly overwrite `cmi.core.session_time`, because some LMSs turn each commit into a separate learning-time row.
 
+For custom packages with several exit events, use a per-launch guard such as `sessionTimeSaved` so the same elapsed duration is not submitted twice by `pagehide`, `beforeunload`, `unload`, or manual termination. This is documented as a runtime inspection pattern, not an automatic converter patch.
+
 For `cmi.core.exit`, prefer conditional final-state behavior when LMS testing shows both variants work: set `suspend` for unfinished attempts, and set an empty exit value after `completed`, `passed`, or `failed`. Always writing `suspend` is kept as an LMS-specific fallback, not the default recommendation.
 
 See `scorm2004-to-12/references/runtime-debugging-notes.md` for the detailed gate.

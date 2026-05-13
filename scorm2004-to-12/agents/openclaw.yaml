@@ -22,6 +22,8 @@ validation:
     - "completion/pass"
     - "score reporting when applicable"
     - "learning-time reporting"
+runtime_guidance:
+  learning_time_guard: "Inspect exit paths before editing. If multiple events can submit session time, use a per-launch guard such as sessionTimeSaved; do not apply this as a blind automatic patch."
 notes:
   - "This is metadata for OpenClaw-style routing. The actual workflow remains in SKILL.md and scripts/scorm_asset_doctor.py."
   - "For custom course runtime fixes, load references/runtime-debugging-notes.md before editing JavaScript."

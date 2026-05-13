@@ -1,7 +1,7 @@
 ---
 name: scorm2004-to-12
 description: Repair and rebuild SCORM/Rise course packages, especially SCORM 2004 packages with broken image loading, asset path mismatches, URL-encoding problems, or requests to convert/rebuild as SCORM 1.2. Use when Codex is given SCORM ZIP files, Rise exports, imsmanifest.xml, scormcontent/index.html, or asks for SCORM 2004 to 1.2 conversion, localization without breaking assets, or image/resource loading diagnostics.
-version: 0.2.1
+version: 0.2.2
 license: MIT
 compatibility: Requires Python 3, zip/unzip, and local filesystem access.
 metadata: {"agents":["codex","hermes","openclaw","generic-agent"],"hermes":{"profile":"agents/hermes.yaml"},"openclaw":{"profile":"agents/openclaw.yaml","homepage":"https://github.com/Kevinyuyj/convert-to-scorm1.2"}}
@@ -103,7 +103,7 @@ Do not migrate these unless deliberately rebuilding assets:
 SCORM 2004 to 1.2 is not a pure text transform. The manifest namespaces, sequencing metadata, and LMS API expectations differ. This skill now produces a conservative `SCORM 1.2-like` package by preserving the course runtime, normalizing assets, replacing the manifest with a SCORM 1.2 manifest, and setting Rustici `strLMSStandard` to `SCORM`. Report that LMS smoke testing is still required before treating the package as production-proven.
 
 Use `references/conversion-notes.md` when you need deeper conversion or manifest guidance.
-Use `references/runtime-debugging-notes.md` when the package has custom course-layer SCORM JavaScript, bookmark/resume bugs, completion bugs, score bugs, suspicious learning-time records, or uncertain `cmi.core.exit` behavior.
+Use `references/runtime-debugging-notes.md` when the package has custom course-layer SCORM JavaScript, bookmark/resume bugs, completion bugs, score bugs, suspicious learning-time records, duplicate unload/pagehide handlers, or uncertain `cmi.core.exit` behavior.
 
 ## Agent Compatibility
 
