@@ -31,6 +31,7 @@ RUNTIME_FILES = {
     "closing": "js/pages/closing-page.js",
     "select_lang": "js/pages/select-lang.js",
     "module_start": "js/controller/moduleStart.js",
+    "loadmodule": "js/controller/loadmodule.js",
     "bundle": "js/scripts.js",
 }
 
@@ -106,7 +107,6 @@ TRACKING_PATCH = r'''
     moduleData.bcp47languagetag = localData.bcp47languagetag;
     scorm.set("cmi.suspend_data", JSON.stringify(moduleData));
     scorm.set("cmi.core.lesson_location", buildLessonLocation());
-    scorm.set("cmi.core.session_time", elapsedSessionTime());
   }
 
   function isFinalStatus(status) {
@@ -158,10 +158,13 @@ TRACKING_PATCH = r'''
 
   var originalScormTerminate = window.ScormTerminate;
   window.ScormTerminate = function () {
-    if (window.__scormRuntime12Terminated) return;
+    if (window.__scormRuntime12Terminated) return true;
     window.SaveData();
-    scorm.quit();
-    window.__scormRuntime12Terminated = true;
+    var quitResult = scorm.quit();
+    if (quitResult !== false || !scorm.connection || !scorm.connection.isActive) {
+      window.__scormRuntime12Terminated = true;
+    }
+    return quitResult;
   };
 
   var originalStoreFinalScore = window.StoreFinalScore;
@@ -352,6 +355,37 @@ def patch_bundle(path: Path) -> list[str]:
         text, changed = replace_once(text, old, new)
         if changed:
             changes.append("store language-aware lesson_location in bundled navigation")
+    old = '$(function(){ScormInitialize(),moduleStart.init(),$(window).on("unload",function(){ScormTerminate()}),$(window).on("beforeunload",function(e){ScormTerminate()})})'
+    new = '$(function(){ScormInitialize(),moduleStart.init();var e=function(){ScormTerminate()};$(window).on("pagehide",e),$(window).on("beforeunload",e),$(window).on("unload",e)})'
+    text, changed = replace_once(text, old, new)
+    if changed:
+        changes.append("add pagehide and shared termination handler in bundled startup code")
+    write_text(path, text)
+    return changes
+
+
+def patch_loadmodule(path: Path) -> list[str]:
+    if not path.exists():
+        return []
+    text = read_text(path)
+    changes: list[str] = []
+    old = '''  $(window).on("unload", function () {
+    ScormTerminate();
+  });
+
+  $(window).on("beforeunload", function (event) {
+    ScormTerminate();
+  });'''
+    new = '''  var terminateSession = function () {
+    ScormTerminate();
+  };
+
+  $(window).on("pagehide", terminateSession);
+  $(window).on("beforeunload", terminateSession);
+  $(window).on("unload", terminateSession);'''
+    text, changed = replace_once(text, old, new)
+    if changed:
+        changes.append("add pagehide and shared termination handler")
     write_text(path, text)
     return changes
 
@@ -443,6 +477,7 @@ def patch_root(root: Path) -> dict[str, Any]:
     for name, fn in [
         ("js/SCORMlocal.js", patch_scormlocal),
         ("js/controller/moduleStart.js", patch_module_start),
+        ("js/controller/loadmodule.js", patch_loadmodule),
         ("js/scripts.js", patch_bundle),
         ("js/pages/select-lang.js", patch_select_lang),
         ("js/pages/closing-page.js", patch_closing),

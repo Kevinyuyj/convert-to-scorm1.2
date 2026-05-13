@@ -53,14 +53,13 @@ If the launch URL contains `_goto=select-lang`, do not let it override a saved n
 
 ## Learning Time
 
-Write `cmi.core.session_time` whenever committing state, not only during `unload`.
+Write `cmi.core.session_time` when the launch is terminating. Do not write it during ordinary bookmark/progress commits unless LMS testing proves termination-time reporting is lost.
 
 For active sessions:
 
 1. Calculate elapsed time from the SCO initialization timestamp.
-2. Set `cmi.core.session_time`.
-3. Set `cmi.core.exit = "suspend"` while incomplete.
-4. Call `LMSCommit` through the wrapper.
+2. Commit `cmi.suspend_data`, `cmi.core.lesson_location`, and the current non-final `lesson_status`.
+3. Call `LMSCommit` through the wrapper.
 
 For final pass/fail:
 
@@ -70,7 +69,7 @@ For final pass/fail:
 4. Set `cmi.core.exit = ""`.
 5. Commit, then call `LMSFinish`/wrapper `quit`.
 
-Guard against duplicate finish calls because browsers often fire both `beforeunload` and `unload`.
+Guard against duplicate finish calls because browsers often fire `pagehide`, `beforeunload`, and `unload`. Only mark a launch as terminated after `quit` does not clearly fail, so a later close event can retry if the first one was blocked.
 
 ## Flat Custom Runtime Patch Pattern
 
@@ -99,7 +98,8 @@ After patching, run `scripts/scorm_runtime12_patch.py inspect` on the output. Tr
 
 Expected behavior after patching:
 
-- Mid-course page navigation commits `suspend_data`, language-aware `lesson_location`, `session_time`, and `lesson_status=incomplete`.
+- Mid-course page navigation commits `suspend_data`, language-aware `lesson_location`, and `lesson_status=incomplete`.
+- Termination commits `session_time` and calls `LMSFinish` through the wrapper.
 - Selected language is committed immediately after selection.
 - Resume loads the saved language before loading the bookmarked page.
 - Resume still works if `suspend_data` parsing fails but `lesson_location` is present.
@@ -114,6 +114,7 @@ Expected behavior after patching:
 - Resume works but selected language is wrong: language was only stored in `suspend_data` and not restored before page loading.
 - Completion records but score is wrong: page progress was mirrored into `score.raw`. Only final quiz or final assessment score belongs in `score.raw`.
 - Learning time is duplicated: `pagehide`, `beforeunload`, `unload`, and explicit final submit all call the same save path without a one-shot guard.
+- Several short close/reopen cycles appear as one longer LMS row, but longer idle gaps appear as separate rows: usually LMS session aggregation, not a course-side `session_time` field bug.
 
 ## LMS Smoke Test
 

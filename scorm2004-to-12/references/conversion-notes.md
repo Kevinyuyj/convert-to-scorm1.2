@@ -36,7 +36,7 @@ Use these as guardrails when distinguishing SCORM-standard requirements from Ris
 - The manifest/resource/file relationship is a SCORM content packaging concern. The internal Rise JSON fields such as `crushedKey`, `src`, and `originalUrl` are authoring-tool/runtime implementation details, not SCORM-standard fields.
 - Treat asset repair as a runtime-package repair step. Treat SCORM 2004 to 1.2 conversion as a standards/profile change that needs a compatible 1.2 manifest/driver template or donor export.
 - For SCORM 1.2 runtime tracking, use `cmi.core.lesson_status`, `cmi.core.lesson_location`, `cmi.suspend_data`, `cmi.core.score.raw`, `cmi.core.session_time`, and `cmi.core.exit`. Do not use SCORM 2004 fields such as `cmi.progress_measure`, `cmi.success_status`, or `cmi.score.scaled` in a 1.2 package.
-- For mobile LMS compatibility, writing current `cmi.core.session_time` before meaningful commits can protect against lost unload events. Verify the target LMS does not duplicate or fragment learning-time rows; if it does, use a guarded termination-only write path.
+- For mobile LMS compatibility, wire `pagehide` as well as `beforeunload` and `unload` to the guarded termination path. Keep `cmi.core.session_time` on termination by default; add mid-course time writes only as an LMS-specific fallback when testing proves termination-time reporting is lost.
 
 Primary references checked:
 

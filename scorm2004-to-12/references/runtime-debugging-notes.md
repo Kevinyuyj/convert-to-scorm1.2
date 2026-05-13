@@ -60,14 +60,16 @@ Minimum smoke test:
 
 `cmi.core.session_time` should represent the elapsed time for the current launch session. The LMS is responsible for accumulating total time.
 
-The default repair pattern may write the current `cmi.core.session_time` with progress/bookmark commits because some mobile LMS shells lose unload events. Treat that as a compatibility choice, not a universal rule. If LMS testing shows many duplicated or fragmented learning-time rows, switch to the guarded termination-only pattern below.
+The default repair pattern writes `cmi.core.session_time` on termination only, not during ordinary bookmark/progress commits. It also wires `pagehide`, `beforeunload`, and `unload` into one guarded termination path, because mobile LMS shells and embedded players may not fire all close events consistently.
+
+If LMS testing proves termination-time reporting is lost, a package-specific fallback can write current `session_time` during meaningful commits. Treat that as an LMS compatibility override, not the default. If LMS testing shows several short close/reopen cycles displayed as one longer row while longer idle gaps create separate rows, that is usually LMS aggregation rather than a course-side field bug.
 
 Recommended pattern:
 
 1. Record a session start timestamp during SCORM initialization.
-2. During progress/bookmark saves, commit `lesson_location`, `suspend_data`, status, and score as needed. Include `session_time` here only when LMS/mobile testing requires it.
-3. On real termination/unload, compute elapsed time, set `cmi.core.session_time`, set `cmi.core.exit`, commit, then quit.
-4. If multiple browser exit events call the same save function (`pagehide`, `beforeunload`, `unload`, or a manual `ScormTerminate()`), add a per-launch guard so the same elapsed time is not submitted twice.
+2. During progress/bookmark saves, commit `lesson_location`, `suspend_data`, status, and score as needed. Do not set `session_time` here by default.
+3. On real termination (`pagehide`, `beforeunload`, `unload`, or explicit final submit), compute elapsed time, set `cmi.core.session_time`, set `cmi.core.exit`, commit, then quit.
+4. If several browser exit events call the same save function, use a per-launch guard so the same elapsed time is not submitted twice. Only mark the launch as terminated after `quit` does not clearly fail, so a later close event can retry if the first one was blocked.
 
 Recommended guard for custom vendor runtimes:
 
@@ -88,7 +90,7 @@ function SaveData(includeSessionTime) {
 
 This guard prevents duplicate submission of the same launch session duration. It does not prevent the next launch from reporting a new duration, because the page reloads and `sessionTimeSaved` starts as `false` again.
 
-Do not add this as a blind automatic script patch. First inspect the course runtime and confirm whether more than one exit path can write `session_time`.
+Do not add mid-course `session_time` writes as a blind automatic patch. First inspect the course runtime and confirm whether the target LMS loses termination-time reporting.
 
 Smoke test:
 

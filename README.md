@@ -78,7 +78,8 @@ For custom HTML packages, page display and LMS tracking often fail for different
 5. Do not gate resume on learning progress. A page bookmark should resume even if progress is `0`, partial, or already `1`.
 6. Do not let a default `_goto=select-lang` launch parameter override a saved non-language page.
 7. Commit immediately after language selection and after page transitions. Waiting for unload is unreliable on mobile browsers and in mobile LMS shells.
-8. Do not mirror page progress into quiz score. `score.raw` is only for the final quiz or final assessment result.
+8. Keep `session_time` as a termination-time field by default. Bookmark/progress commits should save `lesson_location` and `suspend_data`; `cmi.core.session_time` should be written when `ScormTerminate()` runs through `pagehide`, `beforeunload`, `unload`, or a final submit path.
+9. Do not mirror page progress into quiz score. `score.raw` is only for the final quiz or final assessment result.
 
 ## Expected validation targets
 
@@ -134,9 +135,9 @@ When a package uses custom runtime files such as `SCORMlocal.js` or `pipwerks.SC
 - `cmi.core.session_time`
 - `cmi.core.exit`
 
-For learning time, start with the target LMS behavior. Some mobile LMS shells lose unload events, so the runtime patch may write current `session_time` during meaningful commits. If the LMS duplicates or fragments time rows, switch to a guarded termination-only write path.
+For learning time, start with the target LMS behavior. The runtime patcher uses a termination-only `session_time` write by default, adds `pagehide` alongside `beforeunload` and `unload`, and does not mark the launch as terminated unless `quit` is not clearly failed. This keeps short bookmark commits from creating misleading time fragments while still giving mobile LMS shells an earlier close signal.
 
-For custom packages with several exit events, use a per-launch guard such as `sessionTimeSaved` so the same elapsed duration is not submitted twice by `pagehide`, `beforeunload`, `unload`, or manual termination. This is documented as a runtime inspection pattern, not an automatic converter patch.
+Some LMS products still merge several short close/reopen cycles into one displayed learning-time row and split rows only after a longer idle gap. Treat that as platform aggregation unless `LMSFinish` is missing or `session_time` is not being written at termination.
 
 For `cmi.core.exit`, prefer conditional final-state behavior when LMS testing shows both variants work: set `suspend` for unfinished attempts, and set an empty exit value after `completed`, `passed`, or `failed`. Always writing `suspend` is kept as an LMS-specific fallback, not the default recommendation.
 

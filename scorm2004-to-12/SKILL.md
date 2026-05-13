@@ -96,7 +96,7 @@ Use this only when `inspect` reports a supported flat custom runtime. It repairs
 - final quiz score through `cmi.core.score.raw`
 - completion/pass/fail through `cmi.core.lesson_status`
 - session duration through `cmi.core.session_time`
-- end-of-attempt persistence through `LMSCommit` plus `LMSFinish`/`quit`
+- end-of-attempt persistence through `LMSCommit` plus `LMSFinish`/`quit`, with `pagehide`, `beforeunload`, and `unload` wired to the same guarded termination path
 - known SCORM 2004-only runtime fields in supported vendor packages, including `cmi.progress_measure`, `cmi.completion_status`, `cmi.success_status`, `cmi.score.scaled`, `cmi.session_time`, and `cmi.exit`
 - simple root manifest framing from SCORM 2004 metadata to SCORM 1.2 metadata
 
@@ -135,10 +135,11 @@ When repairing a custom runtime, make the runtime contract explicit before editi
 - `suspend_data` is the rich JSON state. It should include page, progress, chapter state, quiz state, and language metadata.
 - Restore `lesson_location` first on launch. Then parse and merge `suspend_data`. If `suspend_data` is invalid, keep the page/language from `lesson_location`.
 - Commit immediately after language selection and page navigation. Mobile LMS shells may not reliably run unload handlers.
+- Keep `cmi.core.session_time` on the termination path by default. Short bookmark/progress commits should not create their own time rows unless LMS testing proves termination-time reporting is lost.
 - Do not make resume depend on `learningProgress < 1`.
 - Do not let a default `_goto=select-lang` parameter override a stored non-language page.
 - Do not mirror progress into `cmi.core.score.raw`; only the final quiz or final assessment score belongs there.
-- Guard final submit/quit so `LMSFinish` is called once.
+- Guard final submit/quit so `LMSFinish` is called once, but do not mark the launch terminated if `quit` clearly fails.
 
 For packages with both source files and a bundled runtime, inspect `index.html`. If the browser loads `js/scripts.js`, update or verify the bundle as the source of truth. A common broken patch changes `js/controller/moduleStart.js` but leaves `js/scripts.js` still launching `select-lang`.
 

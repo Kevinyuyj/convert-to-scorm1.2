@@ -2,6 +2,8 @@
 
 ## 2026-05-13
 
+- Updated `scripts/scorm_runtime12_patch.py` so patched flat custom runtimes keep `cmi.core.session_time` on the termination path by default, add `pagehide` beside `beforeunload`/`unload`, and avoid marking a launch terminated if `quit` clearly fails.
+- Documented the LMS behavior where several short close/reopen cycles may display as one aggregated learning-time row while longer idle gaps produce separate records; treat that as platform aggregation unless termination-time reporting is missing.
 - Fixed fresh flat-custom-runtime conversion gaps in `scripts/scorm_runtime12_patch.py`: supported vendor packages now rewrite known SCORM 2004-only runtime fields to SCORM 1.2 fields, inject the missing `centisecsToSCORM12Time()` helper, and convert a simple root manifest to SCORM 1.2 metadata during `patch`.
 - Expanded `inspect` output for flat custom runtimes with `has_scorm12_time_helper`, `legacy_2004_fields`, and `legacy_2004_field_count` so failed conversions are visible before LMS upload.
 - Updated README and runtime references so patched flat custom packages must pass `scorm_12_manifest: true`, `has_scorm12_time_helper: true`, and `legacy_2004_field_count: 0` before delivery.
