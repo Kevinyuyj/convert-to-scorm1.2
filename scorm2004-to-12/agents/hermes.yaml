@@ -8,6 +8,8 @@ runtime:
     inspect: "python3 scorm2004-to-12/scripts/scorm_asset_doctor.py inspect course.zip"
     convert12: "python3 scorm2004-to-12/scripts/scorm_asset_doctor.py convert12 course.zip --output course-scorm12.zip"
     repair: "python3 scorm2004-to-12/scripts/scorm_asset_doctor.py repair course.zip --output repaired.zip --ascii-assets"
+    runtime12_inspect: "python3 scorm2004-to-12/scripts/scorm_runtime12_patch.py inspect course.zip"
+    runtime12_patch: "python3 scorm2004-to-12/scripts/scorm_runtime12_patch.py patch course.zip --output course-runtime12.zip"
 compatibility:
   agent_style: "AgentSkills"
   requires:
@@ -20,5 +22,13 @@ guidance:
     - "bookmark or resume fails"
     - "completion, score, or learning-time reporting is suspicious"
     - "multiple exit events can write session time"
+    - "index.html loads a bundled js/scripts.js runtime"
   exit_state_default: "Use suspend for unfinished attempts; use an empty exit value after completed, passed, or failed when LMS testing shows both variants work."
   learning_time_guard: "When pagehide, beforeunload, unload, or manual termination share one save path, use a per-launch guard such as sessionTimeSaved to avoid duplicate cmi.core.session_time submission."
+  flat_runtime_rules:
+    - "Inspect index.html before editing; if it loads js/scripts.js, verify the bundle, not only source controller files."
+    - "For multilingual courses, store cmi.core.lesson_location as languagecode|currentPage."
+    - "Restore lesson_location before parsing cmi.suspend_data so mobile LMS resume has a short bookmark fallback."
+    - "Do not let _goto=select-lang override a saved non-language page."
+    - "Commit after language selection and page navigation; do not rely only on unload for mobile."
+    - "Keep final quiz score separate from progress; do not mirror progress into cmi.core.score.raw."

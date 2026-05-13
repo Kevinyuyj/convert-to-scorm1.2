@@ -1,21 +1,25 @@
 # convert-to-scorm1.2
 
-Convert SCORM 2004 course packages to **SCORM 1.2-like** packages with broader LMS compatibility.
+Convert SCORM 2004 course packages to **SCORM 1.2-like** packages with broader LMS compatibility, and patch supported custom HTML SCORM runtimes so LMS tracking works more reliably.
 
-Many learning platforms still have better support for SCORM 1.2 than SCORM 2004. This project provides a practical conversion workflow for Rise-style packages, including asset-path repair and manifest/driver adjustments. It also documents how to debug non-Rise vendor packages where progress, completion, resume, score, or learning-time behavior is controlled by custom course JavaScript.
+Many learning platforms still have better support for SCORM 1.2 than SCORM 2004. This project provides a practical conversion workflow for Rise-style packages, including asset-path repair and manifest/driver adjustments. It also includes a runtime tracking patcher for supported flat custom packages that use root `index.html` plus `js/SCORMlocal.js`.
 
 ## What this includes
 
 - A reusable Codex skill: `scorm2004-to-12`
 - A conversion/repair script:
   - `scorm2004-to-12/scripts/scorm_asset_doctor.py`
+- A runtime tracking patch script:
+  - `scorm2004-to-12/scripts/scorm_runtime12_patch.py`
 - Documentation:
   - `scorm2004-to-12/SKILL.md`
   - `scorm2004-to-12/references/conversion-notes.md`
+  - `scorm2004-to-12/references/runtime-tracking.md`
   - `scorm2004-to-12/references/runtime-debugging-notes.md`
-- Agent compatibility notes:
-  - `scorm2004-to-12/agents/README.md`
+- Agent metadata:
+  - `scorm2004-to-12/agents/hermes.yaml`
   - `scorm2004-to-12/agents/openai.yaml`
+  - `scorm2004-to-12/agents/openclaw.yaml`
 
 ## Quick start
 
@@ -44,6 +48,37 @@ unzip -t course-scorm12.zip
 python3 scorm2004-to-12/scripts/scorm_asset_doctor.py inspect course-scorm12.zip
 ```
 
+Patch a supported flat custom runtime for SCORM 1.2 tracking:
+
+```bash
+python3 scorm2004-to-12/scripts/scorm_runtime12_patch.py inspect course.zip
+python3 scorm2004-to-12/scripts/scorm_runtime12_patch.py patch course.zip --output course-runtime12.zip
+unzip -t course-runtime12.zip
+```
+
+Use the runtime patch only when `inspect` shows the supported flat layout. For other custom runtimes, inspect the loaded JavaScript first and port the same contract manually.
+
+The runtime patcher repairs JavaScript tracking behavior. It does not replace a SCORM 2004 manifest with a SCORM 1.2 manifest. If `inspect` reports `"scorm_12_manifest": false`, convert or rebuild the manifest before treating the ZIP as a SCORM 1.2 package.
+
+## Flat runtime repair checklist
+
+For custom HTML packages, page display and LMS tracking often fail for different reasons. Check both before repackaging:
+
+1. Confirm what the browser actually loads. If `index.html` loads `js/scripts.js`, changing only source files under `js/controller/` or `js/pages/` is not enough. Keep source files and the loaded bundle behavior aligned.
+2. Keep SCORM 1.2 fields strict:
+   - `cmi.core.lesson_status` for incomplete/completed/passed/failed
+   - `cmi.core.lesson_location` for a short bookmark
+   - `cmi.suspend_data` for JSON state
+   - `cmi.core.score.raw` for final score
+   - `cmi.core.session_time` for current session time
+   - `cmi.core.exit` as `suspend` while unfinished and empty for final states
+3. Store a language-aware bookmark for multilingual packages, for example `zh-cn|chapter-3-page`. This gives mobile LMS players a small, reliable resume key even when `suspend_data` handling differs.
+4. On launch, read `cmi.core.lesson_location` before parsing `cmi.suspend_data`. If `suspend_data` is invalid or too large, the course should still resume from the short bookmark.
+5. Do not gate resume on learning progress. A page bookmark should resume even if progress is `0`, partial, or already `1`.
+6. Do not let a default `_goto=select-lang` launch parameter override a saved non-language page.
+7. Commit immediately after language selection and after page transitions. Waiting for unload is unreliable on mobile browsers and in mobile LMS shells.
+8. Do not mirror page progress into quiz score. `score.raw` is only for the final quiz or final assessment result.
+
 ## Expected validation targets
 
 A good converted package should report:
@@ -53,18 +88,29 @@ A good converted package should report:
 - `risky_image_refs: 0`
 - `manifest_missing_refs: 0`
 
+For non-Rise packages, `scorm_asset_doctor.py inspect` may fail because there is no `scormcontent/index.html`. That is a package-shape mismatch, not proof that the ZIP is invalid. Use ZIP integrity, manifest review, runtime JavaScript inspection, and LMS smoke testing instead.
+
+For runtime tracking repairs, verify in the target LMS:
+
+- bookmark/resume returns to the last viewed page
+- selected language is restored before loading the resumed page
+- progress reaches 100% after the final quiz/completion path
+- completion status is recorded as complete/passed
+- final score is recorded in `cmi.core.score.raw`
+- learning time increases through `cmi.core.session_time`
+- the same resume path works on desktop and mobile LMS launchers
+
 ## Scope and limitation
 
-This is a conservative engineering conversion for real-world LMS compatibility. It is not an official Articulate re-export pipeline. Always run an LMS smoke test before production use:
+This is a conservative engineering conversion and runtime repair workflow for real-world LMS compatibility. It is not an official Articulate re-export pipeline or a generic SCORM runtime generator. Always run an LMS smoke test before production use:
 
 1. launch
 2. navigation
 3. bookmark/resume
 4. completion status
 5. score reporting
-6. learning-time reporting
-
-For non-Rise packages, `scorm_asset_doctor.py inspect` may fail because there is no `scormcontent/index.html`. That is a package-shape mismatch, not proof that the ZIP is invalid. Use ZIP integrity, manifest review, runtime JavaScript inspection, and LMS smoke testing instead.
+6. session time reporting
+7. selected-language resume when the course supports multiple languages
 
 ## Runtime debugging notes
 
@@ -77,7 +123,7 @@ When a package uses custom runtime files such as `SCORMlocal.js` or `pipwerks.SC
 - `cmi.core.session_time`
 - `cmi.core.exit`
 
-Learning time should be written once at real session termination. Progress/bookmark commits should not repeatedly overwrite `cmi.core.session_time`, because some LMSs turn each commit into a separate learning-time row.
+For learning time, start with the target LMS behavior. Some mobile LMS shells lose unload events, so the runtime patch may write current `session_time` during meaningful commits. If the LMS duplicates or fragments time rows, switch to a guarded termination-only write path.
 
 For custom packages with several exit events, use a per-launch guard such as `sessionTimeSaved` so the same elapsed duration is not submitted twice by `pagehide`, `beforeunload`, `unload`, or manual termination. This is documented as a runtime inspection pattern, not an automatic converter patch.
 
@@ -93,6 +139,7 @@ This repository does not claim a separate Hermes or OpenClaw plugin runtime. The
 
 - read `scorm2004-to-12/SKILL.md`
 - run `scorm2004-to-12/scripts/scorm_asset_doctor.py`
+- run `scorm2004-to-12/scripts/scorm_runtime12_patch.py` only for supported flat custom runtimes
 - load `references/` only when deeper conversion or runtime-debugging guidance is needed
 - optionally read `agents/hermes.yaml` or `agents/openclaw.yaml` for platform-neutral routing metadata
 

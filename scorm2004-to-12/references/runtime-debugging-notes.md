@@ -60,13 +60,13 @@ Minimum smoke test:
 
 `cmi.core.session_time` should represent the elapsed time for the current launch session. The LMS is responsible for accumulating total time.
 
-Avoid writing `cmi.core.session_time` on every progress or bookmark commit. If every progress save writes session time, some LMSs record each commit as a separate learning-time row, producing many small entries such as one-minute or two-minute fragments instead of one row for the actual time the learner kept the course open.
+The default repair pattern may write the current `cmi.core.session_time` with progress/bookmark commits because some mobile LMS shells lose unload events. Treat that as a compatibility choice, not a universal rule. If LMS testing shows many duplicated or fragmented learning-time rows, switch to the guarded termination-only pattern below.
 
 Recommended pattern:
 
 1. Record a session start timestamp during SCORM initialization.
-2. During progress/bookmark saves, commit `lesson_location`, `suspend_data`, status, and score as needed, but do not update `session_time`.
-3. On real termination/unload, compute elapsed time once, set `cmi.core.session_time`, set `cmi.core.exit`, commit, then quit.
+2. During progress/bookmark saves, commit `lesson_location`, `suspend_data`, status, and score as needed. Include `session_time` here only when LMS/mobile testing requires it.
+3. On real termination/unload, compute elapsed time, set `cmi.core.session_time`, set `cmi.core.exit`, commit, then quit.
 4. If multiple browser exit events call the same save function (`pagehide`, `beforeunload`, `unload`, or a manual `ScormTerminate()`), add a per-launch guard so the same elapsed time is not submitted twice.
 
 Recommended guard for custom vendor runtimes:
