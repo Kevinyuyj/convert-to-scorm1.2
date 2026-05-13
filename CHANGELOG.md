@@ -2,6 +2,9 @@
 
 ## 2026-05-13
 
+- Fixed fresh flat-custom-runtime conversion gaps in `scripts/scorm_runtime12_patch.py`: supported vendor packages now rewrite known SCORM 2004-only runtime fields to SCORM 1.2 fields, inject the missing `centisecsToSCORM12Time()` helper, and convert a simple root manifest to SCORM 1.2 metadata during `patch`.
+- Expanded `inspect` output for flat custom runtimes with `has_scorm12_time_helper`, `legacy_2004_fields`, and `legacy_2004_field_count` so failed conversions are visible before LMS upload.
+- Updated README and runtime references so patched flat custom packages must pass `scorm_12_manifest: true`, `has_scorm12_time_helper: true`, and `legacy_2004_field_count: 0` before delivery.
 - Added `sessionTimeSaved` as a recommended runtime guard pattern for custom vendor packages where multiple exit events can submit the same `cmi.core.session_time`; documented that this should remain an inspected runtime fix, not an automatic converter patch.
 - Clarified the recommended SCORM 1.2 `cmi.core.exit` behavior after LMS testing: use `suspend` for unfinished attempts and an empty exit value after `completed`, `passed`, or `failed` when both variants pass; keep always-`suspend` as an LMS-specific fallback.
 - Expanded the public skill documentation for the verified desktop/mobile runtime repair flow.

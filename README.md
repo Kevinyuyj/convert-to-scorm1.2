@@ -48,17 +48,18 @@ unzip -t course-scorm12.zip
 python3 scorm2004-to-12/scripts/scorm_asset_doctor.py inspect course-scorm12.zip
 ```
 
-Patch a supported flat custom runtime for SCORM 1.2 tracking:
+Patch a supported flat custom runtime for SCORM 1.2 tracking and manifest framing:
 
 ```bash
 python3 scorm2004-to-12/scripts/scorm_runtime12_patch.py inspect course.zip
-python3 scorm2004-to-12/scripts/scorm_runtime12_patch.py patch course.zip --output course-runtime12.zip
-unzip -t course-runtime12.zip
+python3 scorm2004-to-12/scripts/scorm_runtime12_patch.py patch course.zip --output course-scorm12.zip
+unzip -t course-scorm12.zip
+python3 scorm2004-to-12/scripts/scorm_runtime12_patch.py inspect course-scorm12.zip
 ```
 
 Use the runtime patch only when `inspect` shows the supported flat layout. For other custom runtimes, inspect the loaded JavaScript first and port the same contract manually.
 
-The runtime patcher repairs JavaScript tracking behavior. It does not replace a SCORM 2004 manifest with a SCORM 1.2 manifest. If `inspect` reports `"scorm_12_manifest": false`, convert or rebuild the manifest before treating the ZIP as a SCORM 1.2 package.
+The runtime patcher repairs JavaScript tracking behavior, removes known SCORM 2004-only runtime field calls in supported vendor packages, injects the SCORM 1.2 `session_time` helper when needed, and rewrites a simple root `imsmanifest.xml` to SCORM 1.2 metadata. After patching, `inspect` should report `"scorm_12_manifest": true`, `"has_scorm12_time_helper": true`, and `"legacy_2004_field_count": 0`.
 
 ## Flat runtime repair checklist
 
@@ -89,6 +90,16 @@ A good converted package should report:
 - `manifest_missing_refs: 0`
 
 For non-Rise packages, `scorm_asset_doctor.py inspect` may fail because there is no `scormcontent/index.html`. That is a package-shape mismatch, not proof that the ZIP is invalid. Use ZIP integrity, manifest review, runtime JavaScript inspection, and LMS smoke testing instead.
+
+For patched flat custom packages, `scorm_runtime12_patch.py inspect` should report:
+
+- `scorm_12_manifest: true`
+- `has_tracking_patch: true`
+- `has_scorm12_time_helper: true`
+- `has_lesson_location: true`
+- `has_lesson_status: true`
+- `has_session_time: true`
+- `legacy_2004_field_count: 0`
 
 For runtime tracking repairs, verify in the target LMS:
 

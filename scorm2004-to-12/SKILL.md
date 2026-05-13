@@ -86,7 +86,7 @@ python3 scripts/scorm_asset_doctor.py repair course.zip --output repaired.zip --
 
 ```bash
 python3 scorm2004-to-12/scripts/scorm_runtime12_patch.py inspect course.zip
-python3 scorm2004-to-12/scripts/scorm_runtime12_patch.py patch course.zip --output course-runtime12.zip
+python3 scorm2004-to-12/scripts/scorm_runtime12_patch.py patch course.zip --output course-scorm12.zip
 ```
 
 Use this only when `inspect` reports a supported flat custom runtime. It repairs SCORM 1.2 runtime behavior for:
@@ -97,8 +97,10 @@ Use this only when `inspect` reports a supported flat custom runtime. It repairs
 - completion/pass/fail through `cmi.core.lesson_status`
 - session duration through `cmi.core.session_time`
 - end-of-attempt persistence through `LMSCommit` plus `LMSFinish`/`quit`
+- known SCORM 2004-only runtime fields in supported vendor packages, including `cmi.progress_measure`, `cmi.completion_status`, `cmi.success_status`, `cmi.score.scaled`, `cmi.session_time`, and `cmi.exit`
+- simple root manifest framing from SCORM 2004 metadata to SCORM 1.2 metadata
 
-The runtime patcher changes JavaScript tracking behavior only. If `inspect` reports `scorm_12_manifest: false`, separately convert/rebuild the manifest before calling the ZIP a SCORM 1.2 package.
+After patching, run `inspect` on the output ZIP. Do not deliver it as a fresh SCORM 1.2 conversion unless `scorm_12_manifest` is `true`, `has_scorm12_time_helper` is `true`, and `legacy_2004_field_count` is `0`. If any of those checks fail, treat it as a script gap or unsupported runtime shape and inspect manually before delivery.
 
 7. If localizing from another package, do not migrate media/resource fields. Transfer only visible text fields from the reference course JSON. Preserve the destination package media keys and runtime fields.
 8. Verify before delivery:
@@ -114,6 +116,7 @@ For non-Rise packages, `scorm_asset_doctor.py inspect` may fail because there is
 
 For runtime patches, additionally run a local mock or LMS smoke test that confirms:
 
+- `scorm_runtime12_patch.py inspect output.zip` reports `legacy_2004_field_count: 0`
 - reopening resumes at the stored page
 - selected language is restored before loading the resumed page
 - progress reaches 100% only after the final page/quiz path

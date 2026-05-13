@@ -23,7 +23,7 @@ When converting course-layer runtime behavior toward SCORM 1.2, use SCORM 1.2 fi
 - `cmi.core.session_time` only for the current session duration
 - `cmi.core.exit` with `suspend` when the learner should resume later
 
-Do not rely on SCORM 2004-only progress fields such as `cmi.progress_measure` when targeting SCORM 1.2.
+Do not rely on SCORM 2004-only progress fields such as `cmi.progress_measure`, `cmi.completion_status`, `cmi.success_status`, or `cmi.score.scaled` when targeting SCORM 1.2. For supported flat custom runtimes, `scorm_runtime12_patch.py inspect` reports `legacy_2004_field_count`; it should be `0` before delivery.
 
 ## Exit State Gate
 

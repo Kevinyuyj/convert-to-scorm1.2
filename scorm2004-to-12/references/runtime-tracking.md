@@ -89,7 +89,13 @@ The patch is pattern-based and should not be applied blindly to unrelated runtim
 
 For this layout, check `index.html` before editing. If it loads `js/scripts.js`, that bundle is the browser source of truth. Updating only `js/controller/moduleStart.js`, `js/pages/select-lang.js`, or other source-like files can leave the actual course unchanged.
 
-The patcher is not a manifest converter. If the package still has a SCORM 2004 manifest, rebuild the manifest separately before delivering a SCORM 1.2 ZIP.
+For supported flat custom runtimes, the patcher now also rewrites a simple root `imsmanifest.xml` from SCORM 2004 metadata to SCORM 1.2 metadata. This is intentionally conservative: it preserves the original identifier, organization, item, resource, title, and launch `href`, and it does not attempt to generate a full file inventory for arbitrary custom packages.
+
+After patching, run `scripts/scorm_runtime12_patch.py inspect` on the output. Treat these as hard gates before delivery:
+
+- `scorm_12_manifest` is `true`
+- `has_scorm12_time_helper` is `true`
+- `legacy_2004_field_count` is `0`
 
 Expected behavior after patching:
 
