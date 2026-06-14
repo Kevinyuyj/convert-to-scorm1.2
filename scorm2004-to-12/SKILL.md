@@ -102,6 +102,8 @@ Use this only when `inspect` reports a supported flat custom runtime. It repairs
 
 After patching, run `inspect` on the output ZIP. Do not deliver it as a fresh SCORM 1.2 conversion unless `scorm_12_manifest` is `true`, `has_scorm12_time_helper` is `true`, and `legacy_2004_field_count` is `0`. If any of those checks fail, treat it as a script gap or unsupported runtime shape and inspect manually before delivery.
 
+For flat custom runtimes, `scorm_12_manifest=true` must mean the manifest is fully normalized, not just that `<schemaversion>1.2</schemaversion>` appears. The inspect output must also show `manifest_scorm12_namespace=true`, `manifest_scorm2004_namespace=false`, `manifest_uses_scormtype_lower=true`, `manifest_uses_scormType_camel=false`, `manifest_scormtype_values` containing `sco`, and `manifest_missing_file_count=0`. If `adlcp_v1p3` or `adlcp:scormType` remains after patching, rerun or fix `scorm_runtime12_patch.py`; do not report the package as a clean SCORM 1.2 conversion.
+
 7. If localizing from another package, do not migrate media/resource fields. Transfer only visible text fields from the reference course JSON. Preserve the destination package media keys and runtime fields.
 8. Verify before delivery:
 
@@ -117,6 +119,7 @@ For non-Rise packages, `scorm_asset_doctor.py inspect` may fail because there is
 For runtime patches, additionally run a local mock or LMS smoke test that confirms:
 
 - `scorm_runtime12_patch.py inspect output.zip` reports `legacy_2004_field_count: 0`
+- `scorm_runtime12_patch.py inspect output.zip` reports `manifest_scorm12_namespace: true`, `manifest_scorm2004_namespace: false`, `manifest_uses_scormType_camel: false`, and `manifest_missing_file_count: 0`
 - reopening resumes at the stored page
 - selected language is restored before loading the resumed page
 - progress reaches 100% only after the final page/quiz path

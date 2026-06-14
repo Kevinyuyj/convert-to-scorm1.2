@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-06-14
+
+- Synced the installed `scorm2004-to-12` skill into the GitHub repository.
+- Tightened flat custom runtime manifest inspection so `scorm_12_manifest: true` now requires SCORM 1.2 namespace normalization, lowercase `adlcp:scormtype`, `sco` resource type, and no missing manifest file references.
+- Updated `scripts/scorm_runtime12_patch.py` so simple SCORM 1.2-looking manifests that still contain SCORM 2004 namespace or camel-case `adlcp:scormType` are normalized during patching.
+- Expanded README and runtime tracking validation gates to include the new manifest namespace, `scormtype`, and missing-file checks.
+
 ## 2026-05-13
 
 - Updated `scripts/scorm_runtime12_patch.py` so patched flat custom runtimes keep `cmi.core.session_time` on the termination path by default, add `pagehide` beside `beforeunload`/`unload`, and avoid marking a launch terminated if `quit` clearly fails.

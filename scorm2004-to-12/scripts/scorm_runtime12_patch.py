@@ -50,6 +50,9 @@ LEGACY_2004_FIELDS = (
     "cmi.exit",
 )
 
+SCORM12_ADLCP_NS = "http://www.adlnet.org/xsd/adlcp_rootv1p2"
+SCORM2004_ADLCP_NS = "http://www.adlnet.org/xsd/adlcp_v1p3"
+
 
 SCORM12_TIME_HELPER = r'''
 function centisecsToSCORM12Time(n) {
@@ -212,11 +215,22 @@ def detect_runtime(root: Path) -> dict[str, Any]:
     present = {name: path.exists() for name, path in files.items()}
     scorm_text = read_text(files["scorm"]) if present["scorm"] else ""
     manifest_text = read_text(root / "imsmanifest.xml") if (root / "imsmanifest.xml").exists() else ""
+    manifest = inspect_manifest(root, manifest_text)
     legacy_fields = [field for field in LEGACY_2004_FIELDS if field in scorm_text]
     return {
         "layout": "flat-custom-runtime" if present["scorm"] else "unknown",
         "present": present,
-        "scorm_12_manifest": "<schemaversion>1.2</schemaversion>" in manifest_text,
+        "scorm_12_manifest": manifest["scorm_12_manifest"],
+        "manifest_schema": manifest["schema"],
+        "manifest_schemaversion": manifest["schemaversion"],
+        "manifest_scorm12_namespace": manifest["scorm12_namespace"],
+        "manifest_scorm2004_namespace": manifest["scorm2004_namespace"],
+        "manifest_uses_scormtype_lower": manifest["uses_scormtype_lower"],
+        "manifest_uses_scormType_camel": manifest["uses_scormType_camel"],
+        "manifest_scormtype_values": manifest["scormtype_values"],
+        "manifest_file_count": manifest["file_count"],
+        "manifest_missing_files": manifest["missing_files"],
+        "manifest_missing_file_count": len(manifest["missing_files"]),
         "uses_pipwerks": "pipwerks.SCORM" in scorm_text,
         "has_tracking_patch": TRACKING_PATCH_MARKER in scorm_text,
         "has_session_time": "cmi.core.session_time" in scorm_text,
@@ -226,6 +240,40 @@ def detect_runtime(root: Path) -> dict[str, Any]:
         "has_scorm12_time_helper": "function centisecsToSCORM12Time" in scorm_text,
         "legacy_2004_fields": legacy_fields,
         "legacy_2004_field_count": len(legacy_fields),
+    }
+
+
+def inspect_manifest(root: Path, text: str) -> dict[str, Any]:
+    schema = first_match(text, r"<schema>(.*?)</schema>", "")
+    schemaversion = first_match(text, r"<schemaversion>(.*?)</schemaversion>", "")
+    scormtype_values = re.findall(r"adlcp:scorm[Tt]ype=\"([^\"]+)\"", text)
+    file_hrefs = re.findall(r"<file\b[^>]*\shref=\"([^\"]+)\"", text)
+    missing_files = [href for href in file_hrefs if not (root / href).exists()]
+    scorm12_namespace = SCORM12_ADLCP_NS in text
+    scorm2004_namespace = SCORM2004_ADLCP_NS in text
+    uses_scormtype_lower = bool(re.search(r"\badlcp:scormtype=\"", text))
+    uses_scormType_camel = bool(re.search(r"\badlcp:scormType=\"", text))
+    scorm_12_manifest = (
+        schema == "ADL SCORM"
+        and schemaversion == "1.2"
+        and scorm12_namespace
+        and not scorm2004_namespace
+        and uses_scormtype_lower
+        and not uses_scormType_camel
+        and "sco" in [value.lower() for value in scormtype_values]
+        and not missing_files
+    )
+    return {
+        "schema": schema,
+        "schemaversion": schemaversion,
+        "scorm12_namespace": scorm12_namespace,
+        "scorm2004_namespace": scorm2004_namespace,
+        "uses_scormtype_lower": uses_scormtype_lower,
+        "uses_scormType_camel": uses_scormType_camel,
+        "scormtype_values": sorted(set(scormtype_values)),
+        "file_count": len(file_hrefs),
+        "missing_files": missing_files,
+        "scorm_12_manifest": scorm_12_manifest,
     }
 
 
@@ -425,8 +473,16 @@ def patch_manifest(path: Path) -> list[str]:
     if not path.exists():
         return []
     text = read_text(path)
+    changes: list[str] = []
     if "<schemaversion>1.2</schemaversion>" in text:
-        return []
+        original = text
+        text = text.replace(SCORM2004_ADLCP_NS, SCORM12_ADLCP_NS)
+        text = text.replace("adlcp_v1p3.xsd", "adlcp_rootv1p2.xsd")
+        text = text.replace("adlcp:scormType=", "adlcp:scormtype=")
+        if text != original:
+            write_text(path, text)
+            changes.append("normalized manifest namespace and scormtype for SCORM 1.2")
+        return changes
 
     identifier = first_match(text, r'<manifest[^>]*\sidentifier="([^"]+)"', "converted_course")
     org_default = first_match(text, r'<organizations[^>]*\sdefault="([^"]+)"', "ORG")
@@ -442,11 +498,11 @@ def patch_manifest(path: Path) -> list[str]:
     manifest = f'''<?xml version="1.0" standalone="no"?>
 <manifest identifier="{escape(identifier)}" version="1.2"
     xmlns="http://www.imsproject.org/xsd/imscp_v1p1"
-    xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_v1p3"
+    xmlns:adlcp="{SCORM12_ADLCP_NS}"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns:lom="http://ltsc.ieee.org/xsd/LOM"
     xsi:schemaLocation="http://www.imsproject.org/xsd/imscp_v1p1 imscp_v1p1.xsd
-                        http://www.adlnet.org/xsd/adlcp_v1p3 adlcp_v1p3.xsd
+                        {SCORM12_ADLCP_NS} adlcp_rootv1p2.xsd
                         http://ltsc.ieee.org/xsd/LOM lom.xsd">
     <metadata>
         <schema>ADL SCORM</schema>
@@ -461,7 +517,7 @@ def patch_manifest(path: Path) -> list[str]:
         </organization>
     </organizations>
     <resources>
-        <resource identifier="{escape(resource_id)}" type="webcontent" adlcp:scormType="sco" href="{escape(href)}">
+        <resource identifier="{escape(resource_id)}" type="webcontent" adlcp:scormtype="sco" href="{escape(href)}">
             <file href="{escape(href)}"/>
         </resource>
     </resources>

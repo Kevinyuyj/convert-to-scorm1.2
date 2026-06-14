@@ -59,7 +59,7 @@ python3 scorm2004-to-12/scripts/scorm_runtime12_patch.py inspect course-scorm12.
 
 Use the runtime patch only when `inspect` shows the supported flat layout. For other custom runtimes, inspect the loaded JavaScript first and port the same contract manually.
 
-The runtime patcher repairs JavaScript tracking behavior, removes known SCORM 2004-only runtime field calls in supported vendor packages, injects the SCORM 1.2 `session_time` helper when needed, and rewrites a simple root `imsmanifest.xml` to SCORM 1.2 metadata. After patching, `inspect` should report `"scorm_12_manifest": true`, `"has_scorm12_time_helper": true`, and `"legacy_2004_field_count": 0`.
+The runtime patcher repairs JavaScript tracking behavior, removes known SCORM 2004-only runtime field calls in supported vendor packages, injects the SCORM 1.2 `session_time` helper when needed, and rewrites a simple root `imsmanifest.xml` to SCORM 1.2 metadata. After patching, `inspect` should report `"scorm_12_manifest": true`, `"manifest_scorm12_namespace": true`, `"manifest_scorm2004_namespace": false`, `"manifest_uses_scormtype_lower": true`, `"manifest_uses_scormType_camel": false`, `"manifest_missing_file_count": 0`, `"has_scorm12_time_helper": true`, and `"legacy_2004_field_count": 0`.
 
 ## Flat runtime repair checklist
 
@@ -95,6 +95,12 @@ For non-Rise packages, `scorm_asset_doctor.py inspect` may fail because there is
 For patched flat custom packages, `scorm_runtime12_patch.py inspect` should report:
 
 - `scorm_12_manifest: true`
+- `manifest_scorm12_namespace: true`
+- `manifest_scorm2004_namespace: false`
+- `manifest_uses_scormtype_lower: true`
+- `manifest_uses_scormType_camel: false`
+- `manifest_scormtype_values` includes `sco`
+- `manifest_missing_file_count: 0`
 - `has_tracking_patch: true`
 - `has_scorm12_time_helper: true`
 - `has_lesson_location: true`

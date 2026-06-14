@@ -93,6 +93,12 @@ For supported flat custom runtimes, the patcher now also rewrites a simple root 
 After patching, run `scripts/scorm_runtime12_patch.py inspect` on the output. Treat these as hard gates before delivery:
 
 - `scorm_12_manifest` is `true`
+- `manifest_scorm12_namespace` is `true`
+- `manifest_scorm2004_namespace` is `false`
+- `manifest_uses_scormtype_lower` is `true`
+- `manifest_uses_scormType_camel` is `false`
+- `manifest_scormtype_values` includes `sco`
+- `manifest_missing_file_count` is `0`
 - `has_scorm12_time_helper` is `true`
 - `legacy_2004_field_count` is `0`
 
