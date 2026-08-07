@@ -1,7 +1,7 @@
 ---
 name: scorm2004-to-12
-description: Repair and rebuild SCORM packages, especially SCORM 2004/Rise packages with broken image loading, asset path mismatches, or requests to convert/rebuild as SCORM 1.2; also patch flat custom HTML SCORM runtimes for SCORM 1.2 bookmark/resume, completion, score, session time, and language-aware resume. Use when Codex is given SCORM ZIP files, Rise exports, imsmanifest.xml, scormcontent/index.html, root index.html + js/SCORMlocal.js packages, or asks for SCORM 2004 to 1.2 conversion, runtime tracking repair, localization without breaking assets, or LMS completion diagnostics.
-version: 0.2.3
+description: Repair and rebuild SCORM packages, especially SCORM 2004/Rise and Articulate Storyline packages with broken image loading, asset path mismatches, or requests to convert/rebuild as SCORM 1.2; also patch flat custom HTML SCORM runtimes for SCORM 1.2 bookmark/resume, completion, score, session time, and language-aware resume. Use when Codex is given SCORM ZIP files, Rise exports, Storyline exports with index_lms.html + lms/scormdriver.js, imsmanifest.xml, scormcontent/index.html, root index.html + js/SCORMlocal.js packages, or asks for SCORM 2004 to 1.2 conversion, runtime tracking repair, localization without breaking assets, or LMS completion diagnostics.
+version: 0.2.4
 license: MIT
 compatibility:
   - codex
@@ -40,15 +40,26 @@ For non-Rise/custom HTML packages, first identify the runtime shape. A known sup
 
 Treat runtime tracking as a SCORM API contract problem, not an asset problem.
 
+A known supported Articulate Storyline SCORM 2004 runtime has:
+
+- root `index_lms.html`
+- root `story.html`
+- `lms/scormdriver.js`
+- `imsmanifest.xml`
+- asset folders such as `mobile/`, `story_content/`, `html5/`, `common/`, and `lms/`
+
+For Storyline packages, treat conversion as a manifest plus Storyline driver configuration problem. Do not decode or rewrite Rise course JSON because there is no `scormcontent/index.html` resource chain.
+
 ## Decision Tree
 
 1. If the package is a Rise export with `scormcontent/index.html`, use `scorm_asset_doctor.py`.
-2. If the package is a flat custom runtime with root `index.html` and `js/SCORMlocal.js`, use `scorm_runtime12_patch.py` for tracking fixes.
-3. If a known-good same-course SCORM 1.2 package exists, use it as the structural base. Copy only visible text/course data from the bad package and preserve the good package runtime, assets, manifest resource list, and SCORM driver.
-4. If no SCORM 1.2 base exists, run the package through `convert12`: decode course JSON, audit assets, normalize risky paths, update JSON and manifest together, switch the Rustici driver standard to SCORM 1.2, and repackage.
-5. Treat the result as `SCORM 1.2-like` unless an LMS smoke test confirms launch, bookmarking, completion, score, session time, and resume behavior.
-6. Never mix runtime chunks from unrelated exports unless the course JSON and chunk manifests are proven compatible.
-7. If the package is not Rise/Rustici based, inspect the course-layer runtime before promising conversion. Look for wrappers such as `pipwerks.SCORM`, custom `SCORMlocal.js`, navigation controllers, bookmark writes, and score/completion code.
+2. If the package is an Articulate Storyline export with root `index_lms.html` and `lms/scormdriver.js`, use `scorm_storyline12_convert.py`.
+3. If the package is a flat custom runtime with root `index.html` and `js/SCORMlocal.js`, use `scorm_runtime12_patch.py` for tracking fixes.
+4. If a known-good same-course SCORM 1.2 package exists, use it as the structural base. Copy only visible text/course data from the bad package and preserve the good package runtime, assets, manifest resource list, and SCORM driver.
+5. If no SCORM 1.2 base exists for a Rise package, run the package through `convert12`: decode course JSON, audit assets, normalize risky paths, update JSON and manifest together, switch the Rustici driver standard to SCORM 1.2, and repackage.
+6. Treat the result as `SCORM 1.2-like` unless an LMS smoke test confirms launch, bookmarking, completion, score, session time, and resume behavior.
+7. Never mix runtime chunks from unrelated exports unless the course JSON and chunk manifests are proven compatible.
+8. If the package is not Rise, Storyline, or a supported flat custom runtime, inspect the course-layer runtime before promising conversion. Look for wrappers such as `pipwerks.SCORM`, custom `SCORMlocal.js`, navigation controllers, bookmark writes, and score/completion code.
 
 ## Workflow
 
@@ -82,7 +93,37 @@ python3 scripts/scorm_asset_doctor.py convert12 course.zip --output course-scorm
 python3 scripts/scorm_asset_doctor.py repair course.zip --output repaired.zip --ascii-assets
 ```
 
-6. For a flat custom runtime, inspect then patch tracking:
+6. For an Articulate Storyline package, inspect then convert:
+
+```bash
+python3 scripts/scorm_storyline12_convert.py inspect course.zip
+python3 scripts/scorm_storyline12_convert.py convert12 course.zip --output course-scorm12.zip
+```
+
+Use this only when `inspect` reports `layout` as `storyline`, root `index_lms.html` and `story.html` are present, `lms/scormdriver.js` is present, `scorm_2004_manifest` is `true`, and `driver_standard_is_scorm2004` is `true`.
+
+Storyline conversion must:
+
+- preserve all course assets and all existing manifest `<file href="...">` declarations
+- rewrite `imsmanifest.xml` from SCORM 2004 `CAM 1.3` framing to SCORM 1.2 framing
+- remove SCORM 2004 sequencing/navigation namespaces such as `adlcp_v1p3`, `adlseq_v1p3`, `adlnav_v1p3`, and `imsss`
+- write SCORM 1.2 `adlcp_rootv1p2` namespace
+- use `adlcp:scormtype="sco"` lower-case, not `adlcp:scormType`
+- preserve the Storyline launch href, usually `index_lms.html`
+- change `lms/scormdriver.js` from `var strLMSStandard = "SCORM2004"` to `var strLMSStandard = "SCORM"`
+
+After converting, run:
+
+```bash
+unzip -t course-scorm12.zip
+python3 scripts/scorm_storyline12_convert.py inspect course-scorm12.zip
+```
+
+Accept only if ZIP integrity passes and Storyline inspect reports `scorm_12_manifest=true`, `manifest_scorm2004_namespace=false`, `manifest_uses_scormtype_lower=true`, `manifest_uses_scormType_camel=false`, `manifest_missing_file_count=0`, `driver_standard_is_scorm=true`, and `driver_standard_is_scorm2004=false`.
+
+Do not run Rise `scorm_asset_doctor.py convert12` on Storyline packages. `scormcontent/index.html not found` is expected for Storyline and means the package shape is not Rise.
+
+7. For a flat custom runtime, inspect then patch tracking:
 
 ```bash
 python3 scorm2004-to-12/scripts/scorm_runtime12_patch.py inspect course.zip
@@ -104,8 +145,8 @@ After patching, run `inspect` on the output ZIP. Do not deliver it as a fresh SC
 
 For flat custom runtimes, `scorm_12_manifest=true` must mean the manifest is fully normalized, not just that `<schemaversion>1.2</schemaversion>` appears. The inspect output must also show `manifest_scorm12_namespace=true`, `manifest_scorm2004_namespace=false`, `manifest_uses_scormtype_lower=true`, `manifest_uses_scormType_camel=false`, `manifest_scormtype_values` containing `sco`, and `manifest_missing_file_count=0`. If `adlcp_v1p3` or `adlcp:scormType` remains after patching, rerun or fix `scorm_runtime12_patch.py`; do not report the package as a clean SCORM 1.2 conversion.
 
-7. If localizing from another package, do not migrate media/resource fields. Transfer only visible text fields from the reference course JSON. Preserve the destination package media keys and runtime fields.
-8. Verify before delivery:
+8. If localizing from another package, do not migrate media/resource fields. Transfer only visible text fields from the reference course JSON. Preserve the destination package media keys and runtime fields.
+9. Verify before delivery:
 
 ```bash
 unzip -t course-scorm12.zip
@@ -115,6 +156,8 @@ python3 scripts/scorm_asset_doctor.py inspect course-scorm12.zip
 Accept only if `scorm_version` is `SCORM 1.2-like`, `missing_local_image_refs` is `0`, `risky_image_refs` is `0`, `manifest_missing_refs` is `0`, and ZIP integrity passes.
 
 For non-Rise packages, `scorm_asset_doctor.py inspect` may fail because there is no `scormcontent/index.html`. That is a package-shape mismatch, not proof that the ZIP is invalid. Fall back to manifest inspection, ZIP integrity, runtime JavaScript inspection, and LMS smoke testing.
+
+For Storyline packages, prefer `scorm_storyline12_convert.py inspect` over `scorm_asset_doctor.py inspect`. A valid converted Storyline package does not need `has_scorm12_time_helper=true` because Storyline's Rustici driver already contains SCORM 1.2 API mappings such as `cmi.core.lesson_location`, `cmi.suspend_data`, `cmi.core.lesson_status`, `cmi.core.score.raw`, and `cmi.core.session_time` under its `SCORM` standard branch.
 
 For runtime patches, additionally run a local mock or LMS smoke test that confirms:
 
