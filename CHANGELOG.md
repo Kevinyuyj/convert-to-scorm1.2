@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-08-07
+
+- Added Articulate Storyline SCORM 2004 detection and conversion support through `scripts/scorm_storyline12_convert.py`.
+- Documented the Storyline package shape: root `index_lms.html`, root `story.html`, `lms/scormdriver.js`, and `imsmanifest.xml`.
+- Added the Storyline conversion workflow to the public README, including inspect, convert, ZIP integrity, and post-conversion inspect commands.
+- Documented Storyline validation gates for SCORM 1.2 manifest namespace normalization, lowercase `adlcp:scormtype`, complete manifest file references, and Rustici driver standard switching from `SCORM2004` to `SCORM`.
+- Clarified that Rise, Storyline, and supported flat custom runtimes must be detected first and then handled by their matching script.
+
 ## 2026-06-14
 
 - Synced the installed `scorm2004-to-12` skill into the GitHub repository.

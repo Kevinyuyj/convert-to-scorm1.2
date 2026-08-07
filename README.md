@@ -2,13 +2,15 @@
 
 Convert SCORM 2004 course packages to **SCORM 1.2-like** packages with broader LMS compatibility, and patch supported custom HTML SCORM runtimes so LMS tracking works more reliably.
 
-Many learning platforms still have better support for SCORM 1.2 than SCORM 2004. This project provides a practical conversion workflow for Rise-style packages, including asset-path repair and manifest/driver adjustments. It also includes a runtime tracking patcher for supported flat custom packages that use root `index.html` plus `js/SCORMlocal.js`.
+Many learning platforms still have better support for SCORM 1.2 than SCORM 2004. This project provides practical conversion workflows for Rise-style packages and Articulate Storyline packages, including asset-path repair, manifest normalization, and Rustici driver adjustments. It also includes a runtime tracking patcher for supported flat custom packages that use root `index.html` plus `js/SCORMlocal.js`.
 
 ## What this includes
 
 - A reusable Codex skill: `scorm2004-to-12`
 - A conversion/repair script:
   - `scorm2004-to-12/scripts/scorm_asset_doctor.py`
+- A Storyline SCORM 2004 to SCORM 1.2 conversion script:
+  - `scorm2004-to-12/scripts/scorm_storyline12_convert.py`
 - A runtime tracking patch script:
   - `scorm2004-to-12/scripts/scorm_runtime12_patch.py`
 - Documentation:
@@ -29,7 +31,7 @@ Run inspect first:
 python3 scorm2004-to-12/scripts/scorm_asset_doctor.py inspect course.zip
 ```
 
-Convert SCORM 2004 package to SCORM 1.2-like output:
+Convert a Rise-style SCORM 2004 package to SCORM 1.2-like output:
 
 ```bash
 python3 scorm2004-to-12/scripts/scorm_asset_doctor.py convert12 course.zip --output course-scorm12.zip
@@ -47,6 +49,17 @@ Validate output:
 unzip -t course-scorm12.zip
 python3 scorm2004-to-12/scripts/scorm_asset_doctor.py inspect course-scorm12.zip
 ```
+
+Convert an Articulate Storyline SCORM 2004 package that has root `index_lms.html`, root `story.html`, and `lms/scormdriver.js`:
+
+```bash
+python3 scorm2004-to-12/scripts/scorm_storyline12_convert.py inspect course.zip
+python3 scorm2004-to-12/scripts/scorm_storyline12_convert.py convert12 course.zip --output course-scorm12.zip
+unzip -t course-scorm12.zip
+python3 scorm2004-to-12/scripts/scorm_storyline12_convert.py inspect course-scorm12.zip
+```
+
+Use the Storyline converter only when `inspect` reports `"layout": "storyline"`, `"scorm_2004_manifest": true`, and `"driver_standard_is_scorm2004": true`. The converted package should report `"scorm_12_manifest": true`, `"manifest_scorm2004_namespace": false`, `"manifest_uses_scormtype_lower": true`, `"manifest_uses_scormType_camel": false`, `"manifest_missing_file_count": 0`, `"driver_standard_is_scorm": true`, and `"driver_standard_is_scorm2004": false`.
 
 Patch a supported flat custom runtime for SCORM 1.2 tracking and manifest framing:
 
@@ -91,6 +104,19 @@ A good converted package should report:
 - `manifest_missing_refs: 0`
 
 For non-Rise packages, `scorm_asset_doctor.py inspect` may fail because there is no `scormcontent/index.html`. That is a package-shape mismatch, not proof that the ZIP is invalid. Use ZIP integrity, manifest review, runtime JavaScript inspection, and LMS smoke testing instead.
+
+For converted Storyline packages, `scorm_storyline12_convert.py inspect` should report:
+
+- `layout: storyline`
+- `scorm_12_manifest: true`
+- `manifest_scorm12_namespace: true`
+- `manifest_scorm2004_namespace: false`
+- `manifest_uses_scormtype_lower: true`
+- `manifest_uses_scormType_camel: false`
+- `manifest_scormtype_values` includes `sco`
+- `manifest_missing_file_count: 0`
+- `driver_standard_is_scorm: true`
+- `driver_standard_is_scorm2004: false`
 
 For patched flat custom packages, `scorm_runtime12_patch.py inspect` should report:
 
@@ -157,6 +183,7 @@ This repository does not claim a separate Hermes or OpenClaw plugin runtime. The
 
 - read `scorm2004-to-12/SKILL.md`
 - run `scorm2004-to-12/scripts/scorm_asset_doctor.py`
+- run `scorm2004-to-12/scripts/scorm_storyline12_convert.py` only for Articulate Storyline packages with root `index_lms.html` and `lms/scormdriver.js`
 - run `scorm2004-to-12/scripts/scorm_runtime12_patch.py` only for supported flat custom runtimes
 - load `references/` only when deeper conversion or runtime-debugging guidance is needed
 - optionally read `agents/hermes.yaml` or `agents/openclaw.yaml` for platform-neutral routing metadata
